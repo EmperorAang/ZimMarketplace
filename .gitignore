@@ -1,0 +1,45 @@
+# Node.js / React
+node_modules/
+npm-debug.log
+yarn-error.log
+dist/
+build/
+
+# .NET / C#
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+.vs/
+.vscode/
+*.user
+*.userprefs
+*.nuget.props
+*.nuget.targets
+
+# Java / Maven
+target/
+.m2/
+*.jar
+*.class
+.classpath
+.project
+.settings/
+
+# IDE and Editor files
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.suo
+*.sln.iml
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# OS files
+Thumbs.db
