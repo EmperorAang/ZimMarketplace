@@ -73,7 +73,7 @@ Before running the project locally, ensure you have:
 
 - Node.js 20+ and npm
 - .NET 10 SDK
-- Java 25 JDK
+- Java 17 JDK
 - Maven
 - Docker Desktop or Docker Engine
 - Git

@@ -74,14 +74,7 @@ builder.Services.AddHostedService<AuctionWorker>();
 builder.Services.AddDbContext<MarketplaceDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("MarketplaceConnection")));
 
-builder.Services.AddOpenApi();
-
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.UseCors("AllowReactApp");
 app.UseHttpsRedirection();
