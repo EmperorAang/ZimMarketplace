@@ -14,8 +14,8 @@
     <name>payments</name>
     <description>Payment microservice for ZimMarketplace</description>
     <properties>
-        <java.version>17</java.version>
-        <maven.compiler.release>17</maven.compiler.release>
+        <java.version>25</java.version>
+        <maven.compiler.release>25</maven.compiler.release>
     </properties>
     <dependencies>
         <dependency>
