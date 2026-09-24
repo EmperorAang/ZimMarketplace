@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel.DataAnnotations;
 
 namespace ZimMarketplace.API.Models
 {
@@ -10,7 +11,7 @@ namespace ZimMarketplace.API.Models
         public decimal BasePrice { get; set; } // This is starting bid for auctions, or flat price for instant
         public string Currency { get; set; } = "USD";
         public string Location { get; set; } = "Harare";
-        public string Status { get; set; } = "Active"; // "Active" or "Sold"
+        public string Status { get; set; } = "Active"; // Active, AwaitingPayment, Sold, Expired
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         // --- UPDATED HYBRID AUCTION FIELDS ---
@@ -18,6 +19,12 @@ namespace ZimMarketplace.API.Models
         public decimal CurrentBid { get; set; }
         public decimal? InstantBuyPrice { get; set; } // Nullable: only set if they want an instant buyout option
         public DateTime? EndTime { get; set; } // End timestamp for auctions
+        public DateTime? PaymentDueDate { get; set; }
+        public string? EscrowStatus { get; set; }
+        public string? PaymentTransactionId { get; set; }
+
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Guid.NewGuid().ToByteArray();
 
         public Guid SellerId { get; set; }
         public User? Seller { get; set; }

@@ -34,3 +34,110 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+.listing-skeleton-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+.listing-skeleton {
+  min-height: 360px;
+  padding: 24px;
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  position: relative;
+}
+
+.listing-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(148, 163, 184, 0.08), transparent);
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+.listing-skeleton__top,
+.listing-skeleton__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.listing-skeleton__bottom {
+  flex-wrap: wrap;
+  border-top: 1px solid rgba(51, 65, 85, 0.6);
+  padding-top: 16px;
+}
+
+.listing-skeleton__title,
+.listing-skeleton__pill,
+.listing-skeleton__type,
+.listing-skeleton__description,
+.listing-skeleton__price-label,
+.listing-skeleton__price,
+.listing-skeleton__button {
+  background: #1e293b;
+  border-radius: 8px;
+}
+
+.listing-skeleton__title { height: 24px; width: 58%; }
+.listing-skeleton__pill { height: 20px; width: 64px; border-radius: 999px; }
+.listing-skeleton__type { height: 16px; width: 96px; margin-top: 18px; opacity: 0.7; }
+.listing-skeleton__description { height: 12px; width: 82%; margin-top: 14px; opacity: 0.45; }
+.listing-skeleton__price-label { height: 14px; width: 54px; opacity: 0.55; }
+.listing-skeleton__price { height: 28px; width: 112px; }
+.listing-skeleton__button { height: 42px; width: 100%; margin-top: 16px; opacity: 0.75; }
+
+.listing-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(71, 85, 105, 0.9) !important;
+  box-shadow: 0 24px 48px rgba(30, 64, 175, 0.12);
+}
+
+.tactile-button {
+  transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+}
+
+.tactile-button:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.tactile-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  animation: toast-enter 200ms ease-out;
+}
+
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes toast-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listing-skeleton::after,
+  .toast-notification {
+    animation: none;
+  }
+
+  .listing-card,
+  .tactile-button {
+    transition: none;
+  }
+}
