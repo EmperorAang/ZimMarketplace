@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Polly;
+using Polly.Extensions.Http;
 using ZimMarketplace.API.Hubs;
 using ZimMarketplace.API.Models;
 using ZimMarketplace.API.Services;
@@ -14,7 +16,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.SetIsOriginAllowed(_ => true)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
@@ -70,18 +72,35 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddSignalR(); 
 
 builder.Services.AddHostedService<AuctionWorker>();
+builder.Services.AddSingleton<PaymentService>();
+builder.Services.AddHttpClient<IPaymentServiceClient, PaymentServiceClient>((serviceProvider, client) =>
+{
+    var baseUrl = serviceProvider.GetRequiredService<IConfiguration>()["PaymentService:BaseUrl"] ?? "http://localhost:8080";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(15);
+})
+.AddPolicyHandler(HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromMilliseconds(200 * Math.Pow(2, retryAttempt))))
+.AddPolicyHandler(HttpPolicyExtensions
+    .HandleTransientHttpError()
+    .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30)));
 
 builder.Services.AddDbContext<MarketplaceDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("MarketplaceConnection")));
 
-builder.Services.AddOpenApi();
-
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 {
-    app.MapOpenApi();
-}
+    var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+    if (exception != null) logger.LogError(exception, "Unhandled API exception for {Path}", context.Request.Path);
+
+    context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+    context.Response.ContentType = "application/json";
+    await context.Response.WriteAsJsonAsync(new { message = "An unexpected server error occurred." });
+}));
 
 app.UseCors("AllowReactApp");
 app.UseHttpsRedirection();

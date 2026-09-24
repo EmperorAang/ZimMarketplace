@@ -68,9 +68,51 @@ public class ListingsController : ControllerBase
         return Ok(userListings);
     }
 
+    [HttpGet("won")]
+    [Authorize]
+    public async Task<ActionResult<IEnumerable<Listing>>> GetWonAuctions()
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null) return Unauthorized(new { message = "Invalid bidder token." });
+
+        var wonListings = await _context.Listings
+            .Include(l => l.Seller)
+            .Include(l => l.Bids)
+            .Where(l => l.Status == "AwaitingPayment" &&
+                        l.Bids.OrderByDescending(b => b.Amount).ThenByDescending(b => b.BidTime)
+                            .Select(b => (Guid?)b.BidderId).FirstOrDefault() == userId.Value)
+            .OrderBy(l => l.PaymentDueDate)
+            .ToListAsync();
+
+        return Ok(wonListings);
+    }
+
+    [HttpGet("{id}/bids")]
+    public async Task<ActionResult<IEnumerable<BidLogDto>>> GetBidHistory(Guid id)
+    {
+        var listingExists = await _context.Listings.AnyAsync(listing => listing.Id == id);
+        if (!listingExists) return NotFound(new { message = "Listing not found." });
+
+        var bids = await _context.Bids
+            .AsNoTracking()
+            .Include(bid => bid.Bidder)
+            .Where(bid => bid.ListingId == id)
+            .OrderByDescending(bid => bid.BidTime)
+            .Select(bid => new BidLogDto
+            {
+                Id = bid.Id,
+                BidderName = bid.Bidder == null ? "Verified Bidder" : bid.Bidder.FullName,
+                Amount = bid.Amount,
+                CreatedAt = bid.BidTime.UtcDateTime
+            })
+            .ToListAsync();
+
+        return Ok(bids);
+    }
+
     // 3. GET: api/listings/admin/all (Global Admin Platform Overview)
     [HttpGet("admin/all")]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<object>> GetAdminOverview()
     {
         var listings = await _context.Listings
@@ -95,7 +137,7 @@ public class ListingsController : ControllerBase
 
     // 4. DELETE: api/listings/admin/{id} (Admin Moderation Cancel)
     [HttpDelete("admin/{id}")]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AdminCancelListing(Guid id)
     {
         var listing = await _context.Listings.FindAsync(id);
@@ -130,6 +172,7 @@ public class ListingsController : ControllerBase
 
         listing.Status = "Active";
         listing.CreatedAt = DateTime.UtcNow;
+        listing.RowVersion = Guid.NewGuid().ToByteArray();
 
         _context.Listings.Add(listing);
         await _context.SaveChangesAsync();
@@ -164,6 +207,11 @@ public class ListingsController : ControllerBase
         Guid? previousBidderId = previousBid?.BidderId;
 
         listing.CurrentBid = bidDto.Amount;
+        if (listing.EndTime.HasValue && listing.EndTime.Value - DateTime.UtcNow < TimeSpan.FromMinutes(2))
+        {
+            listing.EndTime = DateTime.UtcNow.AddMinutes(2);
+        }
+        listing.RowVersion = Guid.NewGuid().ToByteArray();
         var bidder = await _context.Users.FindAsync(bidderId.Value);
 
         var newBidEntry = new Bid
@@ -176,15 +224,29 @@ public class ListingsController : ControllerBase
 
         _context.Bids.Add(newBidEntry);
         _context.Entry(listing).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
-
-        await _hubContext.Clients.All.SendAsync("ReceiveNewBid", new
+        try
         {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "Another user placed a higher bid just now. Please try again." });
+        }
+
+        var bidUpdate = new
+        {
+            itemId = listing.Id,
             listingId = listing.Id,
+            currentBid = listing.CurrentBid,
             newBid = listing.CurrentBid,
             bidderName = bidder?.FullName ?? "Verified Bidder",
-            previousBidderId = previousBidderId
-        });
+            previousBidderId = previousBidderId,
+            createdAt = newBidEntry.BidTime.UtcDateTime,
+            endTime = listing.EndTime
+        };
+
+        await _hubContext.Clients.Group($"item-{listing.Id}").SendAsync("ReceiveBidUpdate", bidUpdate);
+        await _hubContext.Clients.All.SendAsync("ReceiveNewBid", bidUpdate);
 
         return Ok(new { message = "Bid placed successfully!", currentBid = listing.CurrentBid, listingId = listing.Id });
     }
@@ -194,12 +256,41 @@ public class ListingsController : ControllerBase
     [Authorize]
     public async Task<IActionResult> MarkAsSold(Guid id)
     {
-        var listing = await _context.Listings.FindAsync(id);
+        var buyerId = GetCurrentUserId();
+        if (buyerId == null) return Unauthorized(new { message = "Invalid buyer token." });
+
+        var listing = await _context.Listings
+            .Include(l => l.Bids)
+            .FirstOrDefaultAsync(l => l.Id == id);
         if (listing == null) return NotFound();
 
+        if (listing.Status == "AwaitingPayment")
+        {
+            var winningBidderId = listing.Bids
+                .OrderByDescending(b => b.Amount)
+                .ThenByDescending(b => b.BidTime)
+                .Select(b => (Guid?)b.BidderId)
+                .FirstOrDefault();
+
+            if (winningBidderId != buyerId) return Forbid();
+        }
+        else if (listing.Status != "Active")
+        {
+            return Conflict(new { message = "Listing is no longer available for purchase." });
+        }
+
         listing.Status = "Sold";
+        listing.PaymentDueDate = null;
+        listing.RowVersion = Guid.NewGuid().ToByteArray();
         _context.Entry(listing).State = EntityState.Modified;
-        await _context.SaveChangesAsync();
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return Conflict(new { message = "This listing was purchased by another user just now." });
+        }
 
         await _hubContext.Clients.All.SendAsync("CatalogUpdated");
         return Ok(new { message = "Item marked as sold." });

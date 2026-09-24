@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ZimMarketplace.API.Models;
@@ -11,9 +12,11 @@ using ZimMarketplace.API.Models;
 namespace ZimMarketplace.API.Migrations
 {
     [DbContext(typeof(MarketplaceDbContext))]
-    partial class MarketplaceDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260909102456_AddListingConcurrency")]
+    partial class AddListingConcurrency
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -49,45 +52,6 @@ namespace ZimMarketplace.API.Migrations
                     b.ToTable("Bids");
                 });
 
-            modelBuilder.Entity("ZimMarketplace.API.Models.ExchangeRate", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("BaseCurrency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
-                    b.Property<DateTime>("EffectiveAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("QuoteCurrency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("character varying(3)");
-
-                    b.Property<decimal>("Rate")
-                        .HasColumnType("numeric");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BaseCurrency", "QuoteCurrency", "EffectiveAt");
-
-                    b.ToTable("ExchangeRates");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-111111111111"),
-                            BaseCurrency = "USD",
-                            EffectiveAt = new DateTime(2026, 9, 9, 0, 0, 0, 0, DateTimeKind.Utc),
-                            QuoteCurrency = "ZiG",
-                            Rate = 25.5m
-                        });
-                });
-
             modelBuilder.Entity("ZimMarketplace.API.Models.Listing", b =>
                 {
                     b.Property<Guid>("Id")
@@ -114,9 +78,6 @@ namespace ZimMarketplace.API.Migrations
                     b.Property<DateTime?>("EndTime")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("EscrowStatus")
-                        .HasColumnType("text");
-
                     b.Property<decimal?>("InstantBuyPrice")
                         .HasColumnType("numeric");
 
@@ -126,12 +87,6 @@ namespace ZimMarketplace.API.Migrations
 
                     b.Property<string>("Location")
                         .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("PaymentDueDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("PaymentTransactionId")
                         .HasColumnType("text");
 
                     b.Property<byte[]>("RowVersion")
@@ -167,11 +122,6 @@ namespace ZimMarketplace.API.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("City")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
-
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -193,21 +143,6 @@ namespace ZimMarketplace.API.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<string>("PreferredPaymentProvider")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("character varying(30)");
-
-                    b.Property<string>("Username")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("VerificationStatus")
                         .IsRequired()

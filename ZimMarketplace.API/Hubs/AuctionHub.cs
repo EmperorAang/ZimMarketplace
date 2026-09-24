@@ -4,6 +4,10 @@ namespace ZimMarketplace.API.Hubs
 {
     public class AuctionHub : Hub
     {
-        // Broadcasts real-time events to all connected React clients
+        public Task JoinItemRoom(string itemId) =>
+            Groups.AddToGroupAsync(Context.ConnectionId, $"item-{itemId}");
+
+        public Task LeaveItemRoom(string itemId) =>
+            Groups.RemoveFromGroupAsync(Context.ConnectionId, $"item-{itemId}");
     }
 }

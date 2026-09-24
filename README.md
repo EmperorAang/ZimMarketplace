@@ -2,6 +2,8 @@
 
 ZimMarketplace is a full-stack online marketplace platform that combines a React frontend, a .NET API backend, and a Java payment microservice. The project is structured as a multi-service application with real-time auction updates, secure API access, and containerized PostgreSQL persistence.
 
+For the running implementation and validation history, see the [ZimMarketplace change summary](.github/modernize/java-upgrade/20260909090849/summary.md).
+
 ## Overview
 
 This repository contains:
@@ -119,6 +121,15 @@ npm run dev
 The UI will run at:
 
 - `http://localhost:5173`
+- LAN devices: `http://192.168.101.81:5173`
+
+For LAN testing, keep the API running with the HTTP launch profile. It listens on `http://0.0.0.0:5159`, and the frontend derives its API and SignalR host from the browser hostname. Both devices must be connected to the same Wi-Fi network, and Windows Firewall must allow the development ports.
+
+After pulling database changes, apply migrations from the repository root:
+
+```bash
+dotnet ef database update --project ZimMarketplace.API/ZimMarketplace.API.csproj --startup-project ZimMarketplace.API/ZimMarketplace.API.csproj
+```
 
 ### 5. Run the payment microservice
 

@@ -29,19 +29,24 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "An account with this email already exists." });
         }
 
+        var role = dto.Email.ToLower().Contains("admin") ? "Admin" : "User";
+
         var user = new User
         {
             Id = Guid.NewGuid(),
             FullName = dto.FullName,
+            Username = dto.Email.Split('@')[0].Trim(),
             Email = dto.Email.ToLower(),
             PhoneNumber = dto.PhoneNumber,
+            City = "Harare",
+            PreferredPaymentProvider = "EcoCash",
+            Role = role,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
         };
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var role = user.Email.ToLower().Contains("admin") ? "Admin" : "User";
         var token = GenerateJwtToken(user, role);
 
         return Ok(new AuthResponseDto
@@ -49,6 +54,7 @@ public class AuthController : ControllerBase
             Token = token,
             FullName = user.FullName,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
             UserId = user.Id,
             Role = role
         });
@@ -64,7 +70,16 @@ public class AuthController : ControllerBase
             return Unauthorized(new { message = "Invalid email or password." });
         }
 
-        var role = user.Email.ToLower().Contains("admin") ? "Admin" : "User";
+        var role = string.IsNullOrWhiteSpace(user.Role)
+            ? (user.Email.ToLower().Contains("admin") ? "Admin" : "User")
+            : user.Role;
+
+        if (string.IsNullOrWhiteSpace(user.Role))
+        {
+            user.Role = role;
+            await _context.SaveChangesAsync();
+        }
+
         var token = GenerateJwtToken(user, role);
 
         return Ok(new AuthResponseDto
@@ -72,6 +87,7 @@ public class AuthController : ControllerBase
             Token = token,
             FullName = user.FullName,
             Email = user.Email,
+            PhoneNumber = user.PhoneNumber,
             UserId = user.Id,
             Role = role
         });
